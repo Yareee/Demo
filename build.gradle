@@ -1,0 +1,54 @@
+buildscript {
+    repositories {
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+
+    dependencies {
+        classpath "org.gradle:test-retry-gradle-plugin:" + findProperty("gradle-retry-plugin.version")
+        classpath "io.qameta.allure:allure-gradle:" + findProperty("allure-gradle.version")
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'io.qameta.allure'
+apply plugin: "org.gradle.test-retry"
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    compile (
+            [group: 'io.qameta.allure', name: 'allure-junit5', version: findProperty("allure-junit5.version")],
+            [group: 'com.codeborne', name: 'selenide', version: findProperty("selenide.version")],
+            [group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: findProperty("junit-jupiter-engine.version")],
+    )
+}
+
+allure {
+    autoconfigure = true
+    version = findProperty("allure-junit5.version")
+    useJUnit5 {
+        version = findProperty("allure-junit5.version")
+    }
+}
+
+test {
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching "com.yaree.demo.tests.*"
+    }
+    retry {
+        maxRetries = 1
+        failOnPassedAfterRetry = false
+    }
+}
+
+//Used to transfer environment.properties into allure reports folder, so they would be displayed in the report.
+task copyConfig(type: Copy) {
+    from 'environment.properties'
+    into 'build/allure-results'
+}
+
+test.finalizedBy(copyConfig)
